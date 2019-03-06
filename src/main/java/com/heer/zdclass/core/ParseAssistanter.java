@@ -7,6 +7,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
+import javax.servlet.http.HttpSession;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -98,6 +99,16 @@ public class ParseAssistanter {
         // 学分情况
         Element credit = videos.get(0).select("tr").first().select("td").get(1);
         return credit.text();
+    }
+
+    /**
+     * 从session中拿去课程连接
+     * @param session se
+     * @return Map
+     */
+    public Map<String, String> getUrlMap(HttpSession session) {
+        String name = String.valueOf(session.getAttribute("username"));
+        return (Map<String, String>) session.getAttribute(String.format("%skeUrlMap", name));
     }
 
 }

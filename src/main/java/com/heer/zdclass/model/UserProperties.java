@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
 @Component
 @ConfigurationProperties(prefix = "user")
 public class UserProperties {
+    public final static String LOGIN_FORM_PROP_UID = "uid";
+    public final static String LOGIN_FORM_PROP_PASSWD = "pw";
+
     private String username;
     private String pwd;
 

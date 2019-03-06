@@ -50,13 +50,13 @@ public class CoreController {
     }
 
     /**
-     * 获取每个课程的视频点播情况
+     * 更具课程名称点播
      *
      * @param keName
      * @return
      * @throws IOException
      */
-    @GetMapping("/{keName}")
+    @GetMapping("/demand/{keName}")
     public SimpleResponse getClassDetailInfo(@PathVariable String keName, HttpSession session) throws IOException {
         coreParser.demandBykeName(session, keName);
         return new SimpleResponse("点播成功。");
