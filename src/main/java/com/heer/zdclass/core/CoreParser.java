@@ -16,6 +16,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.*;
 
 
 /**
@@ -28,6 +29,11 @@ public class CoreParser {
 
     @Autowired
     private ParseAssistanter parseAssistanter;
+
+    /**
+     * 控制线程任务执行数量
+     */
+    private Semaphore semaphore = new Semaphore(5);
 
     /**
      * 登录
@@ -104,15 +110,11 @@ public class CoreParser {
     }
 
     /**
-     * 获取课程的情况
+     * 根据课程名点播
      *
-     * @param keName
-     * @param request
-     * @return
+     * @param session
      */
-    public ClassInfo getClassDetailInfo(String keName, HttpServletRequest request) throws IOException {
-
-        HttpSession session = request.getSession();
+    public void demandBykeName(HttpSession session, String keName) throws IOException {
         String name = (String) session.getAttribute("username");
         session.setAttribute("keName", keName);
         Map<String, String> urlMap = (Map<String, String>) session.getAttribute(String.format("%skeUrlMap", name));
@@ -122,24 +124,37 @@ public class CoreParser {
         classInfo.setClassUrl(keUrl);
         Document document = Execute.getDocumentByMethod(keUrl, "GET", null);
         parseAssistanter.parseClassDocument(document, classInfo);
-        session.setAttribute(String.format("%sclassInfo", name + keName), classInfo);
-        return classInfo;
+        // 创建任务
+        DemandVideo demandVideo = new DemandVideo(classInfo, semaphore);
+        Thread thread = new Thread(demandVideo);
+        thread.setName(keName);
+        thread.start();
     }
 
-
     /**
-     * @param request
+     * 点播全部课程
+     *
+     * @param session
      */
-    public void demandBykeName(HttpServletRequest request) {
-        HttpSession session = request.getSession();
+    public void demandAllClass(HttpSession session) {
         String name = (String) session.getAttribute("username");
-        String keName = (String) session.getAttribute("keName");
-        ClassInfo classInfo = (ClassInfo) session.getAttribute(String.format("%sclassInfo", name + keName));
-
-        // 启动点播任务
-        DemandVideo demandVideo = new DemandVideo(classInfo);
-        Thread demandVideoThread = new Thread(demandVideo);
-        demandVideoThread.start();
+        Map<String, String> urlMap = (Map<String, String>) session.getAttribute(String.format("%skeUrlMap", name));
+        urlMap.forEach((k, v) -> {
+            try {
+                ClassInfo classInfo = new ClassInfo();
+                classInfo.setClassName(k);
+                classInfo.setClassUrl(v);
+                Document document = Execute.getDocumentByMethod(v, "GET", null);
+                parseAssistanter.parseClassDocument(document, classInfo);
+                // 创建任务
+                DemandVideo demandVideo = new DemandVideo(classInfo, semaphore);
+                Thread thread = new Thread(demandVideo);
+                thread.setName(k);
+                thread.start();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        });
     }
 
 
@@ -149,23 +164,30 @@ public class CoreParser {
     private class DemandVideo implements Runnable {
         private ClassInfo classInfo;
 
-        public DemandVideo(ClassInfo classInfo) {
+        private Semaphore semaphore;
+
+        public DemandVideo(ClassInfo classInfo, Semaphore semaphore) {
             this.classInfo = classInfo;
+            this.semaphore = semaphore;
         }
 
         @Override
         public void run() {
-            Map<String, String> notSeenUrlMap = classInfo.getClassVideoUrlMap();
-            Set<Map.Entry<String, String>> notseen = notSeenUrlMap.entrySet();
-            for (Map.Entry<String, String> map : notseen) {
-                String k = map.getKey();
-                String v = map.getValue();
+            try {
+                // 拿到任务执行权
+                semaphore.acquire();
 
-                System.out.println("点播了课程视频：【"+classInfo.getClassName()+"】" + k);
-                try {
-                    // 点播
-                    Execute.getDocumentByMethod(v, "GET", null);
-                    System.out.println("3.30分钟后,继续点播视频。请稍等...");
+                System.out.println("开始点播【"+Thread.currentThread().getName()+"】......");
+
+                if(semaphore.hasQueuedThreads()){
+                    // 是否有等待的课程
+                    System.out.println("还有["+semaphore.getQueueLength()+"]门课程等待！");
+                }
+                Map<String, String> notSeenUrlMap = classInfo.getClassVideoUrlMap();
+                Set<Map.Entry<String, String>> notseen = notSeenUrlMap.entrySet();
+                for (Map.Entry<String, String> map : notseen) {
+                    String k = map.getKey();
+                    String v = map.getValue();
                     ParseAssistanter assistanter = new ParseAssistanter();
                     String creditStr = assistanter.getCredit(classInfo.getClassUrl());
                     String credit = creditStr.replaceAll("[^\\d+]", "");
@@ -173,14 +195,19 @@ public class CoreParser {
                         // 中断线程
                         Thread.currentThread().interrupt();
                         System.out.println("点播课程【" + classInfo.getClassName() + "】任务中断，原因：你的本门课程已修完10分。");
+                        // 释放任务的执行权
+                        semaphore.release();
                         break;
                     }
+                    System.out.println("点播了课程视频：【" + classInfo.getClassName() + "】" + k);
+                    // 点播
+                    Execute.getDocumentByMethod(v, "GET", null);
+                    System.out.println("3.30分钟后,继续点播视频。请稍等...");
                     // 点播后休眠3.30分钟
                     Thread.sleep(1000 * 60 * 3 + 1000 * 30);
-                } catch (InterruptedException | IOException e) {
-                    e.printStackTrace();
-                    Thread.currentThread().interrupt();
                 }
+            } catch (InterruptedException | IOException e) {
+                e.printStackTrace();
             }
         }
     }

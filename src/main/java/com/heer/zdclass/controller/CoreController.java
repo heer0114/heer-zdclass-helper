@@ -57,9 +57,18 @@ public class CoreController {
      * @throws IOException
      */
     @GetMapping("/{keName}")
-    public SimpleResponse getClassDetailInfo(@PathVariable String keName, HttpServletRequest request) throws IOException {
-        coreParser.getClassDetailInfo(keName, request);
-        coreParser.demandBykeName(request);
+    public SimpleResponse getClassDetailInfo(@PathVariable String keName, HttpSession session) throws IOException {
+        coreParser.demandBykeName(session, keName);
         return new SimpleResponse("点播成功。");
+    }
+
+    /**
+     * 点播课程
+     * @return
+     */
+    @GetMapping("/demandAll")
+    public SimpleResponse demandAll(HttpSession session){
+        coreParser.demandAllClass(session);
+        return new SimpleResponse("点播成功");
     }
 }
