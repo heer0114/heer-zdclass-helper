@@ -13,5 +13,5 @@ spring:
     suffix: .html
 
 user:
-  username: 18220006059
-  pwd: 19960510
+  username:
+  pwd:
