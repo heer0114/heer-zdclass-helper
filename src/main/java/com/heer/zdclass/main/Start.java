@@ -25,32 +25,46 @@ public class Start implements InitializingBean {
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        boolean flag= userProperties.getUsername() == null || userProperties.getUsername().isEmpty() &&
-                userProperties.getPwd() == null || userProperties.getPwd().isEmpty();
-        if (flag) {
-            Scanner sc = new Scanner(System.in);
-            System.out.println("请输入你的账号/密码：");
-            String namepwd = sc.nextLine();
-            String[] nameAndPwd = namepwd.split("/");
-            String username = nameAndPwd[0];
-            String password = nameAndPwd[1];
-            userProperties.setUsername(username);
-            userProperties.setPwd(password);
-            System.out.println(userProperties.toString());
-        }
+        Scanner sc = new Scanner(System.in);
+        System.out.println();
+        System.out.println("请输入你的账号/密码：");
+        inputUserInfo(sc);
         // 登录并初始化信息
-        Map<String, String> keUrlMap;
-        try {
-            keUrlMap = coreParser.login(userProperties.getUsername(), userProperties.getPwd());
-        } catch (Exception e) {
-            throw new RuntimeException("登录异常，请确保账号/密码正确！");
+        Map<String, String> keUrlMap = null;
+        boolean flag = true;
+        while (flag) {
+            try {
+                keUrlMap = coreParser.login(userProperties.getUsername(), userProperties.getPwd());
+                flag = false;
+            } catch (Exception e) {
+                System.out.println();
+                System.out.println("登录异常，请确保账号/密码正确！");
+                System.out.println();
+                System.out.println("请再次输入账号/密码：");
+                inputUserInfo(sc);
+            }
         }
         System.out.println("课程加载完毕。开始执行点播任务，请稍等......");
-        System.out.println("点播课程全部完成后，程序自动关闭！");
         // 点播全部课程
         coreParser.demandAllClass(keUrlMap);
+        System.out.println();
         System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        System.out.println("已完成全部任务，程序即将关闭。");
+        System.out.println("已完成全部任务，回车关闭程序。");
+        sc.nextLine();
         System.out.println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+    }
+
+    /**
+     * 输入账户/密码
+     * @param sc sc
+     */
+    private void inputUserInfo(Scanner sc) {
+        String namepwd = sc.nextLine();
+        String[] nameAndPwd = namepwd.split("/");
+        String username = nameAndPwd[0];
+        String password = nameAndPwd[1];
+        userProperties.setUsername(username);
+        userProperties.setPwd(password);
+        System.out.println(userProperties.toString());
     }
 }
