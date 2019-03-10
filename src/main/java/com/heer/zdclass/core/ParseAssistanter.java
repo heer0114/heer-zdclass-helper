@@ -7,14 +7,9 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Component;
 
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -24,11 +19,6 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Component
 public class ParseAssistanter {
-
-    private ExecutorService executorService = Executors.newFixedThreadPool(6);
-
-    private List<ClassInfo> classInfos = new ArrayList<>();
-
     public Map<String, String> parseFirstPageInfo(Document firstPage) {
         Elements mytds = firstPage.select("td[class='mytd1']");
         Elements aelements = mytds.get(1).select("p").select("a");
@@ -39,7 +29,7 @@ public class ParseAssistanter {
             System.out.println(className);
             keUrlMap.put(className, a.attr("href"));
         });
-        System.out.println("===========================================");
+        System.out.println("========================================");
         return keUrlMap;
     }
 
@@ -99,16 +89,6 @@ public class ParseAssistanter {
         // 学分情况
         Element credit = videos.get(0).select("tr").first().select("td").get(1);
         return credit.text();
-    }
-
-    /**
-     * 从session中拿去课程连接
-     * @param session se
-     * @return Map
-     */
-    public Map<String, String> getUrlMap(HttpSession session) {
-        String name = String.valueOf(session.getAttribute("username"));
-        return (Map<String, String>) session.getAttribute(String.format("%skeUrlMap", name));
     }
 
 }

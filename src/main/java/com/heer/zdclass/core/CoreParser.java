@@ -10,11 +10,12 @@ import org.jsoup.select.Elements;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import javax.servlet.http.HttpSession;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Semaphore;
 
 
@@ -49,7 +50,7 @@ public class CoreParser {
      * @param pwd  密码
      * @throws IOException io
      */
-    public Map<String, String> login(String name, String pwd) throws IOException {
+    public Map<String, String> login(String name, String pwd) throws Exception {
         Document document = Execute.getDocumentByMethod(UrlInfo.PAGE_URL, "GET", null);
 
         // 拿到登录表单
@@ -74,6 +75,7 @@ public class CoreParser {
         Elements redirectDoc = loginDoc.select("input[name='gointo']");
         String[] temp = redirectDoc.get(0).attr("onclick").split("'");
         System.out.println("登录成功，跳转连接：【" + temp[1] + "】");
+        System.out.println("开始加载你的课程，请稍等......");
         return index(temp[1]);
     }
 
@@ -105,46 +107,58 @@ public class CoreParser {
         return parseAssistanter.parseFirstPageInfo(firstPage);
     }
 
+
     /**
      * 根据课程名点播
-     *
-     * @param session session
+     * @param keName 课程名
+     * @throws IOException
      */
-    public void demandBykeName(HttpSession session, String keName) throws IOException {
-        String keUrl = parseAssistanter.getUrlMap(session).get(keName);
+    public void demandBykeName(String keName, Map<String, String> keUrlMap) throws IOException, InterruptedException {
+        CountDownLatch countDownLatch = new CountDownLatch(1);
+        String keUrl = keUrlMap.get(keName);
         ClassInfo classInfo = new ClassInfo();
         classInfo.setClassName(keName);
         classInfo.setClassUrl(keUrl);
         Document document = Execute.getDocumentByMethod(keUrl, "GET", null);
         parseAssistanter.parseClassDocument(document, classInfo);
         // 创建任务
-        DemandClassThread demandVideo = new DemandClassThread(classInfo, PARALLEL_NUM);
+        DemandClassThread demandVideo = new DemandClassThread(classInfo, PARALLEL_NUM, countDownLatch);
         Thread thread = new Thread(demandVideo);
         thread.setName(keName);
         thread.start();
+        countDownLatch.await();
     }
 
     /**
      * 点播全部课程
-     *
-     * @param session session
+     * @param keUrlMap 全部课程url
      */
-    public void demandAllClass(HttpSession session) {
-        parseAssistanter.getUrlMap(session).forEach((k, v) -> {
+    public void demandAllClass(Map<String, String> keUrlMap) throws InterruptedException {
+        CountDownLatch countDownLatch = new CountDownLatch(keUrlMap.size());
+        // 课程信息列表
+        List<ClassInfo> keList = new ArrayList<>();
+        // 获取课程信息
+        keUrlMap.forEach((k, v) -> {
             try {
                 ClassInfo classInfo = new ClassInfo();
                 classInfo.setClassName(k);
                 classInfo.setClassUrl(v);
                 Document document = Execute.getDocumentByMethod(v, "GET", null);
                 parseAssistanter.parseClassDocument(document, classInfo);
-                // 创建任务
-                DemandClassThread demandVideo = new DemandClassThread(classInfo, PARALLEL_NUM);
-                Thread thread = new Thread(demandVideo);
-                thread.setName(k);
-                thread.start();
+                keList.add(classInfo);
             } catch (IOException e) {
                 e.printStackTrace();
             }
         });
+        // 启动任务
+        keList.forEach(classInfo -> {
+            // 创建任务
+            DemandClassThread demandVideo = new DemandClassThread(classInfo, PARALLEL_NUM, countDownLatch);
+            Thread thread = new Thread(demandVideo);
+            thread.setName(classInfo.getClassName());
+            thread.start();
+        });
+        // 等待全部任务结束
+        countDownLatch.await();
     }
 }
