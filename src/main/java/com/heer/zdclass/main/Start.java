@@ -4,7 +4,6 @@ import com.heer.zdclass.core.CoreParser;
 import com.heer.zdclass.model.UserProperties;
 import org.springframework.beans.factory.InitializingBean;
 
-import java.io.IOException;
 import java.util.Map;
 import java.util.Scanner;
 
@@ -40,7 +39,7 @@ public class Start implements InitializingBean {
             System.out.println(userProperties.toString());
         }
         // 登录并初始化信息
-        Map<String, String> keUrlMap = null;
+        Map<String, String> keUrlMap;
         try {
             keUrlMap = coreParser.login(userProperties.getUsername(), userProperties.getPwd());
         } catch (Exception e) {
