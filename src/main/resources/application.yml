@@ -1,17 +1,6 @@
 server:
   port: 1886
 spring:
-  thymeleaf:
-    cache: false
-    check-template: true
-    check-template-location: true
-    content-type: text/html
-    enabled: true
-    encoding: UTF-8
-    mode: HTML5
-    prefix: classpath:/templates/
-    suffix: .html
-
-user:
-  username:
-  pwd:
+  banner:
+    charset: UTF-8
+    location: classpath:banner.txt
