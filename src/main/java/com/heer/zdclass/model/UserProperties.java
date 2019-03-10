@@ -32,4 +32,12 @@ public class UserProperties {
     public void setPwd(String pwd) {
         this.pwd = pwd;
     }
+
+    @Override
+    public String toString() {
+        return "UserProperties{" +
+                "username='" + username + '\'' +
+                ", pwd='" + pwd + '\'' +
+                '}';
+    }
 }
