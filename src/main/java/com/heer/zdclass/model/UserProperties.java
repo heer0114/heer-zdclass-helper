@@ -1,6 +1,5 @@
 package com.heer.zdclass.model;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
@@ -9,7 +8,6 @@ import org.springframework.stereotype.Component;
  * @description:
  */
 @Component
-@ConfigurationProperties(prefix = "user")
 public class UserProperties {
     public final static String LOGIN_FORM_PROP_UID = "uid";
     public final static String LOGIN_FORM_PROP_PASSWD = "pw";

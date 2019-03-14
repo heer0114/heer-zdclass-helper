@@ -18,6 +18,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * @description: 解析助手
  */
 @Component
+@SuppressWarnings("all")
 public class ParseAssistanter {
     public Map<String, String> parseFirstPageInfo(Document firstPage) {
         Elements mytds = firstPage.select("td[class='mytd1']");
@@ -36,10 +37,9 @@ public class ParseAssistanter {
     /**
      * 获取课程的视频信息
      *
-     * @param document
-     * @param classInfo
-     * @return
-     * @throws IOException
+     * @param document  doc
+     * @param classInfo cl
+     * @throws IOException e
      */
     public void parseClassDocument(Document document, ClassInfo classInfo) throws IOException {
         // 视频总数
@@ -54,7 +54,7 @@ public class ParseAssistanter {
         Elements videos = videoDoc.select("table[bordercolor='#79A8E8']");
         // 学分情况
         Element credit = videos.get(0).select("tr").first().select("td").get(1);
-        classInfo.setCredit(credit.text());
+        classInfo.setCredit(this.creditDeal(credit.text()));
         // 视频信息
         Elements videoUrls = videos.get(0).select("td[class='mytd1'] a");
         videoUrls.forEach(a -> {
@@ -73,9 +73,10 @@ public class ParseAssistanter {
 
     /**
      * 获取学分
-     * @param keUrl
-     * @return
-     * @throws IOException
+     *
+     * @param keUrl keurl
+     * @return creditString
+     * @throws IOException ex
      */
     public String getCredit(String keUrl) throws IOException {
 
@@ -91,4 +92,17 @@ public class ParseAssistanter {
         return credit.text();
     }
 
+    /**
+     * 处理学分String 【 1/10 】
+     *
+     * @param creaditStr ke
+     * @return s
+     * @throws IOException r
+     */
+    public String creditDeal(String creaditStr) throws IOException {
+        String[] strArray = creaditStr.split("，");
+        String alreay = strArray[0].replaceAll("[^\\d+]", "");
+        String full = strArray[1].replaceAll("[^\\d+]", "");
+        return "[" + alreay + "/" + full + "]";
+    }
 }

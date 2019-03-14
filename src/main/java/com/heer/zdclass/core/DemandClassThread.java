@@ -2,6 +2,7 @@ package com.heer.zdclass.core;
 
 
 import com.heer.zdclass.execute.Execute;
+import com.heer.zdclass.gui.login.LoginDialog;
 import com.heer.zdclass.model.ClassInfo;
 
 import java.io.IOException;
@@ -54,12 +55,14 @@ public class DemandClassThread implements Runnable {
                     // 释放任务的执行权
                     semaphore.release();
                     countDownLatch.countDown();
+                    LoginDialog.indexFrame.setKeListData();
                     break;
                 }
                 System.out.println("点播了课程视频：【" + classInfo.getClassName() + "】" + k);
                 System.out.println("3.30分钟后,继续点播视频。请稍等...");
                 // 点播后休眠3.30分钟
                 Thread.sleep(1000 * 60 * 3 + 1000 * 30);
+                LoginDialog.indexFrame.setKeListData();
             }
         } catch (InterruptedException | IOException e) {
             e.printStackTrace();

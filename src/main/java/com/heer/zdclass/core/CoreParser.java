@@ -110,9 +110,11 @@ public class CoreParser {
 
     /**
      * 根据课程名点播
+     *
      * @param keName 课程名
-     * @throws IOException
+     * @throws IOException e
      */
+    @SuppressWarnings({"all"})
     public void demandBykeName(String keName, Map<String, String> keUrlMap) throws IOException, InterruptedException {
         CountDownLatch countDownLatch = new CountDownLatch(1);
         String keUrl = keUrlMap.get(keName);
@@ -131,13 +133,47 @@ public class CoreParser {
 
     /**
      * 点播全部课程
+     *
      * @param keUrlMap 全部课程url
      */
     public void demandAllClass(Map<String, String> keUrlMap) throws InterruptedException {
         CountDownLatch countDownLatch = new CountDownLatch(keUrlMap.size());
         // 课程信息列表
+        List<ClassInfo> keList = this.getKeInfoList(keUrlMap);
+        // 启动任务
+        this.startTaskByConsole(keList, countDownLatch);
+        // 等待全部任务结束
+        countDownLatch.await();
+    }
+
+    /**
+     * 启动任务
+     *
+     * @param keList         课程list
+     * @param countDownLatch 计数器
+     */
+    private void startTaskByConsole(List<ClassInfo> keList, CountDownLatch countDownLatch) {
+        // 启动任务
+        keList.forEach(classInfo -> {
+            // 创建任务
+            DemandClassThread demandVideo = new DemandClassThread(classInfo,
+                    PARALLEL_NUM,
+                    countDownLatch);
+            Thread thread = new Thread(demandVideo);
+            thread.setName(classInfo.getClassName());
+            thread.start();
+        });
+    }
+
+    /**
+     * 获取课程信息列表
+     *
+     * @param keUrlMap url
+     * @return list
+     */
+    public List<ClassInfo> getKeInfoList(Map<String, String> keUrlMap) {
+        // 课程信息列表
         List<ClassInfo> keList = new ArrayList<>();
-        // 获取课程信息
         keUrlMap.forEach((k, v) -> {
             try {
                 ClassInfo classInfo = new ClassInfo();
@@ -150,15 +186,6 @@ public class CoreParser {
                 e.printStackTrace();
             }
         });
-        // 启动任务
-        keList.forEach(classInfo -> {
-            // 创建任务
-            DemandClassThread demandVideo = new DemandClassThread(classInfo, PARALLEL_NUM, countDownLatch);
-            Thread thread = new Thread(demandVideo);
-            thread.setName(classInfo.getClassName());
-            thread.start();
-        });
-        // 等待全部任务结束
-        countDownLatch.await();
+        return keList;
     }
 }
