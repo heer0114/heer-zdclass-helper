@@ -2,6 +2,7 @@ package com.heer.zdclass.core;
 
 import com.heer.zdclass.execute.Execute;
 import com.heer.zdclass.model.ClassInfo;
+import com.heer.zdclass.model.UrlInfo;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -20,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @Component
 @SuppressWarnings("all")
 public class ParseAssistanter {
-    public Map<String, String> parseFirstPageInfo(Document firstPage) {
+    public void parseFirstPageInfo(Document firstPage) {
         Elements mytds = firstPage.select("td[class='mytd1']");
         Elements aelements = mytds.get(1).select("p").select("a");
         Map<String, String> keUrlMap = new LinkedHashMap<>();
@@ -31,7 +32,8 @@ public class ParseAssistanter {
             keUrlMap.put(className, a.attr("href"));
         });
         System.out.println("========================================");
-        return keUrlMap;
+        // 获取课程的url
+        UrlInfo.KE_URL_MAP = keUrlMap;
     }
 
     /**

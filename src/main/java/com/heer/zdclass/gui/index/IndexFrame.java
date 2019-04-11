@@ -8,6 +8,7 @@ import com.heer.zdclass.core.CoreParser;
 import com.heer.zdclass.gui.console.ConsoleTask;
 import com.heer.zdclass.gui.console.JTextAreaOutputStream;
 import com.heer.zdclass.model.ClassInfo;
+import com.heer.zdclass.model.UrlInfo;
 import com.heer.zdclass.model.UserProperties;
 import net.miginfocom.swing.MigLayout;
 
@@ -27,15 +28,15 @@ import java.util.Map;
 public class IndexFrame extends JPanel {
 
     private CoreParser coreParser;
-    private Map<String, String> keUrlMap;
+    private Map<String, String> keUrlMap = UrlInfo.KE_URL_MAP;
     private UserProperties userProperties;
-    private static boolean START_BUTTON_FLAG = true;
+    private static boolean START_BUTTON_FLAG = false;
+    private static boolean KE_LIST_LOADING_FLAG = false;
 
-    public IndexFrame(Map<String, String> keUrlMap, CoreParser coreParser, UserProperties userProperties) {
+    public IndexFrame( CoreParser coreParser, UserProperties userProperties) {
         // init
         try {
             this.coreParser = coreParser;
-            this.keUrlMap = keUrlMap;
             this.userProperties = userProperties;
             // 初始化界面
             this.initUI();
@@ -101,10 +102,14 @@ public class IndexFrame extends JPanel {
      * @param e e
      */
     private void startTaskActionPerformed(ActionEvent e) {
-        String hint = !IndexFrame.START_BUTTON_FLAG ? "+++ 注意：任务正在运行，请勿重复点击！+++" : null;
+        String hint = IndexFrame.START_BUTTON_FLAG ? "+++ 注意：任务正在运行，请勿重复点击！+++" : null;
         IndexFrame.START_BUTTON_FLAG = false;
         if (hint != null) {
             System.out.println(hint);
+            return;
+        }
+        if (IndexFrame.KE_LIST_LOADING_FLAG) {
+            System.out.println("正在加载课程信息列表，请稍等...");
             return;
         }
         DemandTaskEventHandle task = new DemandTaskEventHandle();
@@ -136,7 +141,7 @@ public class IndexFrame extends JPanel {
                 System.out.println(String.format("程序出现异常！%s\n", ex.getMessage()));
                 System.out.println("正在为你重启任务...");
                 try {
-                    keUrlMap = coreParser.login(userProperties.getUsername(), userProperties.getPwd());
+                    coreParser.login(userProperties.getUsername(), userProperties.getPwd());
                     coreParser.demandAllClass(keUrlMap);
                 } catch (Exception e) {
                     System.out.println("任务重启失败！");

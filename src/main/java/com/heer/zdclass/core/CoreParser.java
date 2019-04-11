@@ -50,7 +50,7 @@ public class CoreParser {
      * @param pwd  密码
      * @throws IOException io
      */
-    public Map<String, String> login(String name, String pwd) throws Exception {
+    public void login(String name, String pwd) throws Exception {
         Document document = Execute.getDocumentByMethod(UrlInfo.PAGE_URL, "GET", null);
 
         // 拿到登录表单
@@ -76,7 +76,7 @@ public class CoreParser {
         String[] temp = redirectDoc.get(0).attr("onclick").split("'");
         System.out.println("登录成功，跳转连接：【" + temp[1] + "】");
         System.out.println("开始加载你的课程，请稍等......");
-        return index(temp[1]);
+        index(temp[1]);
     }
 
     /**
@@ -85,12 +85,12 @@ public class CoreParser {
      * @param redirectUrl 跳转链接
      * @throws IOException io
      */
-    private Map<String, String> index(String redirectUrl) throws IOException {
+    private void index(String redirectUrl) throws IOException {
         Document document = Execute.getDocumentByMethod(redirectUrl, "GET", null);
         // 获取首页信息url
         Elements elements = document.select("frame[NAME='content']");
         String firstPageUrl = elements.get(0).attr("src");
-        return firstPage(firstPageUrl);
+        firstPage(firstPageUrl);
     }
 
 
@@ -100,11 +100,11 @@ public class CoreParser {
      * @param firstPageUrl 首页的url
      * @throws IOException io
      */
-    private Map<String, String> firstPage(String firstPageUrl) throws IOException {
+    private void firstPage(String firstPageUrl) throws IOException {
         // first page
         Document firstPage = Execute.getDocumentByMethod(firstPageUrl, "GET", null);
 
-        return parseAssistanter.parseFirstPageInfo(firstPage);
+        parseAssistanter.parseFirstPageInfo(firstPage);
     }
 
 

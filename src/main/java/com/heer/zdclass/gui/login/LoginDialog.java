@@ -13,7 +13,6 @@ import javax.swing.*;
 import javax.swing.border.TitledBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
-import java.util.Map;
 
 /**
  * @author heer
@@ -23,6 +22,7 @@ public class LoginDialog extends JPanel {
     private UserProperties userProperties;
     private CoreParser coreParser;
     public static IndexFrame indexFrame = null;
+    private static int eventCount;
 
     public LoginDialog() {
         initComponents();
@@ -41,26 +41,53 @@ public class LoginDialog extends JPanel {
      * @param e e
      */
     private void loginActionPerformed(ActionEvent e) {
+        if (LoginDialog.eventCount != 0) {
+            this.errMsg.setText("正在登录，请勿重复点击！");
+            this.errMsg.setVisible(true);
+            return;
+        }
         String username = this.usernameField.getText();
         String password = String.valueOf(this.passwordField.getPassword());
+        LoginDialog.eventCount = 1;
         this.userProperties.setUsername(username);
         this.userProperties.setPwd(password);
+        LoginThread loginThread = new LoginThread(this.dialog1, this.errMsg, this.userProperties);
+        loginThread.start();
+        this.errMsg.setText("正在登录...");
+        this.errMsg.setVisible(true);
+    }
 
-        // 登录并初始化信息
-        Map<String, String> keUrlMap = null;
-        try {
-            keUrlMap = coreParser.login(userProperties.getUsername(), userProperties.getPwd());
+    /**
+     * 登录 线程
+     */
+    private class LoginThread extends Thread {
+        private JDialog dialog1;
+        private JLabel errMsg;
+        private UserProperties userProperties;
+
+        public LoginThread(JDialog dialog1, JLabel errMsg, UserProperties userProperties) {
+            this.dialog1 = dialog1;
+            this.errMsg = errMsg;
+            this.userProperties = userProperties;
+        }
+
+        @Override
+        public void run() {
+            try {
+                coreParser.login(userProperties.getUsername(), userProperties.getPwd());
+            } catch (Exception e) {
+                e.printStackTrace();
+                this.errMsg.setText("登录出现异常！请确保账户/密码正确！");
+                this.errMsg.setVisible(true);
+                LoginDialog.eventCount = 0;
+                return;
+            }
+
             // close login dialog
             this.dialog1.dispose();
 
             // open index frame
-            indexFrame = new IndexFrame(keUrlMap, coreParser, userProperties);
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            this.errMsg.setText("登录出现异常！请确保账户/密码正确！");
-            this.errMsg.setVisible(true);
-            return;
+            indexFrame = new IndexFrame(coreParser, userProperties);
         }
     }
 
@@ -82,17 +109,17 @@ public class LoginDialog extends JPanel {
             dialog1.setFont(new Font("\u5e7c\u5706", Font.PLAIN, 16));
             Container dialog1ContentPane = dialog1.getContentPane();
             dialog1ContentPane.setLayout(new MigLayout(
-                "hidemode 3",
-                // columns
-                "[49,fill]" +
-                "[335,fill]" +
-                "[47,fill]",
-                // rows
-                "[28]" +
-                "[61]" +
-                "[54]" +
-                "[70]" +
-                "[]"));
+                    "hidemode 3",
+                    // columns
+                    "[49,fill]" +
+                            "[335,fill]" +
+                            "[47,fill]",
+                    // rows
+                    "[28]" +
+                            "[61]" +
+                            "[54]" +
+                            "[70]" +
+                            "[]"));
 
             //---- errMsg ----
             errMsg.setVisible(false);
