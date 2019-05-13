@@ -81,9 +81,7 @@ public class ParseAssistanter {
      * @throws IOException ex
      */
     public String getCredit(String keUrl) throws IOException {
-
         Document document = Execute.getDocumentByMethod(keUrl, "GET", null);
-
         // 获取视频页数据
         Elements elements = document.select("td[class='mytd1']");
         String keVideoPageUrl = elements.get(1).select("a").get(0).attr("href");
@@ -103,8 +101,8 @@ public class ParseAssistanter {
      */
     public String creditDeal(String creaditStr) throws IOException {
         String[] strArray = creaditStr.split("，");
-        String alreay = strArray[0].replaceAll("[^\\d+]", "");
-        String full = strArray[1].replaceAll("[^\\d+]", "");
+        String full = strArray[0].replaceAll("[^\\d+]", "");
+        String alreay = strArray[1].replaceAll("[^\\d+]", "");
         return "[" + alreay + "/" + full + "]";
     }
 }

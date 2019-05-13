@@ -1,6 +1,40 @@
 server:
   port: 1886
+
 spring:
   banner:
     charset: UTF-8
     location: classpath:banner.txt
+#  datasource:
+#    name: mybatis-mysql # 可以省略
+#    # 使用阿里druid数据源 【优点：高效，加入日志监控】项目启动后访问**/druid/index.html
+#    type: com.alibaba.druid.pool.DruidDataSource
+#    driver-class-name: com.mysql.cj.jdbc.Driver
+#    url: jdbc:mysql://121.43.183.133:3306/ZdHelper?useUnicode=true&characterEncoding=utf8&useSSL=false
+#    username: zdhelper
+#    password: zdhelper
+#    # 线程池设置
+#    druid:
+#      initialSize: 5     # 初始大小
+#      minIdle: 5         # 最小
+#      maxActive: 20      # 最大
+#      maxWait: 60000     # 获取连接等待超时的时间
+#      timeBetweenEvictionRunsMilli: 60000  # 间隔多久进行一次检测，关闭空闲的连接
+#      minEvictableIdleTimeMillis: 300000   # 线程最小生存时间
+#      validationQuery: SELECT 1 FROM DUAL  # 检测连接【SQL语句】
+#      testWhileIdle: true
+#      testOnBorrow: false
+#      testOnReturn: false
+#      # 监控统计拦截的filters，去掉后监控界面sql无法统计，'wall'用于防火墙
+#      filters: stat,wall,log4j2
+#      # 通过connectProperties属性来打开mergeSql功能；慢SQL记录
+#      connectionProperties: druid.stat.mergeSql=true;druid.stat.slowSqlMillis=5000
+#      # useGlobalDataSourceStat: true      # 合并多个DruidDataSource的监控数据
+
+zzdx:
+  core-properties:
+   # thread-num: 6 # 同时运行的线程数
+
+mybatis:
+  mapper-locations:
+  - classpath:XmlMapper/*.xml

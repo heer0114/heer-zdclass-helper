@@ -15,11 +15,6 @@ import java.util.Map;
  * @description: 请求访问执行类
  */
 public class Execute {
-
-    private static String USER_AGENT = "User-Agent";
-
-    private static String USER_AGENT_VALUE = "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0";
-
     public static Document getDocumentByMethod(String url, String method, Map<String, Object> datas) throws IOException {
 
         URL uri = new URL(url);
@@ -28,15 +23,15 @@ public class Execute {
         connection.setUseCaches(Boolean.FALSE);
         connection.setDoOutput(true);
         //设置请求头信息
-        connection.addRequestProperty(USER_AGENT, USER_AGENT_VALUE);
+        connection.addRequestProperty(ZdclassRequestHeaderConstant.USER_AGENT, ZdclassRequestHeaderConstant.USER_AGENT_VALUE);
+        connection.addRequestProperty(ZdclassRequestHeaderConstant.ACCEPT, ZdclassRequestHeaderConstant.ACCEPT_VALUE);
+
         // 请求类型
-        connection.setRequestMethod(method);
+        connection.setRequestMethod(method.toUpperCase());
         connection.setInstanceFollowRedirects(true);
         connection.connect();
         // 设置求情参数
         if ("post".equals(method.toLowerCase()) && datas != null) {
-            // 已form表单的形式传递传递参数 默认可以不传
-//            connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
             try (
                     DataOutputStream outputStream = new DataOutputStream(connection.getOutputStream())
             ){

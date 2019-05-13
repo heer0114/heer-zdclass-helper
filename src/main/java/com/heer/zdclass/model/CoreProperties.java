@@ -1,5 +1,6 @@
 package com.heer.zdclass.model;
 
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
 /**
@@ -8,12 +9,33 @@ import org.springframework.stereotype.Component;
  * @description:
  */
 @Component
-public class UserProperties {
+@ConfigurationProperties(prefix = "zzdx.core-properties")
+public class CoreProperties {
+
+    /**
+     * 用户表单name
+     */
     public final static String LOGIN_FORM_PROP_UID = "uid";
     public final static String LOGIN_FORM_PROP_PASSWD = "pw";
 
+    /**
+     * 用户名/密码
+     */
     private String username;
     private String pwd;
+
+    /**
+     * 运行线程数【同时点播的课程数量】， 默认：5，最大不超过本学期的课程数
+     */
+    private int threadNum;
+
+    public int getThreadNum() {
+        return threadNum;
+    }
+
+    public void setThreadNum(int threadNum) {
+        this.threadNum = threadNum;
+    }
 
     public String getUsername() {
         return username;
@@ -33,7 +55,7 @@ public class UserProperties {
 
     @Override
     public String toString() {
-        return "UserProperties{" +
+        return "CoreProperties{" +
                 "username='" + username + '\'' +
                 ", pwd='" + pwd + '\'' +
                 '}';

@@ -2,7 +2,7 @@ package com.heer.zdclass.core;
 
 
 import com.heer.zdclass.execute.Execute;
-import com.heer.zdclass.gui.login.LoginDialog;
+import com.heer.zdclass.gui.index.IndexFrame;
 import com.heer.zdclass.model.ClassInfo;
 
 import java.io.IOException;
@@ -14,16 +14,16 @@ import java.util.concurrent.Semaphore;
 /**
  * @author: heer_
  * @date: 19/03/06 15:24
- * @description:
+ * @description: 点播任务
  */
 public class DemandClassThread implements Runnable {
     private ClassInfo classInfo;
-
     private Semaphore semaphore;
-
     private CountDownLatch countDownLatch;
+    private IndexFrame indexFrame;
 
-    DemandClassThread(ClassInfo classInfo, Semaphore semaphore, CountDownLatch countDownLatch) {
+    DemandClassThread(IndexFrame indexFrame, ClassInfo classInfo, Semaphore semaphore, CountDownLatch countDownLatch) {
+        this.indexFrame = indexFrame;
         this.classInfo = classInfo;
         this.semaphore = semaphore;
         this.countDownLatch = countDownLatch;
@@ -34,11 +34,11 @@ public class DemandClassThread implements Runnable {
         try {
             // 拿到任务执行权
             semaphore.acquire();
-            System.out.println("开始点播【"+Thread.currentThread().getName()+"】......");
-            if(semaphore.hasQueuedThreads()){
+            System.out.println("开始点播【" + Thread.currentThread().getName() + "】......");
+            if (semaphore.hasQueuedThreads()) {
                 // 是否有等待的课程
                 System.out.println("**************************************************");
-                System.out.println("还有["+semaphore.getQueueLength()+"]门课程等待！");
+                System.out.println("还有[" + semaphore.getQueueLength() + "]门课程等待！");
                 System.out.println("**************************************************");
             }
             Map<String, String> notSeenUrlMap = classInfo.getClassVideoUrlMap();
@@ -48,29 +48,33 @@ public class DemandClassThread implements Runnable {
                 String v = map.getValue();
                 // 点播
                 Execute.getDocumentByMethod(v, "GET", null);
-                if(isCreditFull()){
+                if (isCreditFull()) {
                     // 中断线程
                     Thread.currentThread().interrupt();
                     System.out.println("课程【" + classInfo.getClassName() + "】学分已得满分。");
                     // 释放任务的执行权
                     semaphore.release();
                     countDownLatch.countDown();
-                    LoginDialog.indexFrame.setKeListData();
+                    indexFrame.setKeListData();
                     break;
                 }
                 System.out.println("点播了课程视频：【" + classInfo.getClassName() + "】" + k);
-                System.out.println("3.30分钟后,继续点播视频。请稍等...");
-                // 点播后休眠3.30分钟
-                Thread.sleep(1000 * 60 * 3 + 1000 * 30);
-                LoginDialog.indexFrame.setKeListData();
+                System.out.println("3.10分钟后,继续点播视频。请稍等...");
+                synchronized (this) {
+                    this.wait(1000 * 60 * 3 + 1000 * 10);
+                }
+                indexFrame.setKeListData();
             }
         } catch (InterruptedException | IOException e) {
+            semaphore.release();
+            countDownLatch.countDown();
             e.printStackTrace();
         }
     }
 
     /**
      * 判断课程的学分是否已满
+     *
      * @return boolean
      */
     private boolean isCreditFull() throws IOException {

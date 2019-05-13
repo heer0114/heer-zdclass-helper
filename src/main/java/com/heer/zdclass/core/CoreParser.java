@@ -1,9 +1,11 @@
 package com.heer.zdclass.core;
 
 import com.heer.zdclass.execute.Execute;
+import com.heer.zdclass.gui.index.IndexFrame;
+import com.heer.zdclass.model.BaseUserInfo;
 import com.heer.zdclass.model.ClassInfo;
+import com.heer.zdclass.model.CoreProperties;
 import com.heer.zdclass.model.UrlInfo;
-import com.heer.zdclass.model.UserProperties;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
@@ -26,17 +28,18 @@ import java.util.concurrent.Semaphore;
  */
 @Component
 public class CoreParser {
-
     /**
      * 解析助手
      */
     @Autowired
     private ParseAssistanter parseAssistanter;
 
-    /**
-     * 控制线程任务执行数量
-     */
-    private static final Semaphore PARALLEL_NUM = new Semaphore(5);
+    @Autowired
+    private CoreProperties coreProperties;
+
+    @Autowired
+    private BaseUserInfo baseUserInfo;
+
     /**
      * 解析dom属性名
      */
@@ -59,11 +62,11 @@ public class CoreParser {
         Map<String, Object> datas = new HashMap<>();
         // 设置登录数据
         elements.forEach(e -> {
-            if (UserProperties.LOGIN_FORM_PROP_UID.equals(e.attr(ATTR_KEY_NAME))) {
+            if (CoreProperties.LOGIN_FORM_PROP_UID.equals(e.attr(ATTR_KEY_NAME))) {
                 e.attr(ATTR_KEY_VALUE, name);
             }
 
-            if (UserProperties.LOGIN_FORM_PROP_PASSWD.equals(e.attr(ATTR_KEY_NAME))) {
+            if (CoreProperties.LOGIN_FORM_PROP_PASSWD.equals(e.attr(ATTR_KEY_NAME))) {
                 e.attr(ATTR_KEY_VALUE, pwd);
             }
 
@@ -80,19 +83,52 @@ public class CoreParser {
     }
 
     /**
+     * 注销
+     */
+    public void logout() throws IOException {
+        if (!UrlInfo.LOGOUT_URL.isEmpty()) {
+            coreProperties.setUsername("");
+            Execute.getDocumentByMethod(UrlInfo.LOGOUT_URL, "GET", null);
+        }
+    }
+
+    /**
      * 主页面
      *
      * @param redirectUrl 跳转链接
      * @throws IOException io
      */
     private void index(String redirectUrl) throws IOException {
+        // index page
         Document document = Execute.getDocumentByMethod(redirectUrl, "GET", null);
-        // 获取首页信息url
-        Elements elements = document.select("frame[NAME='content']");
-        String firstPageUrl = elements.get(0).attr("src");
+
+        // index top page
+        Elements mytopPage = document.select("frame[name='mytop']");
+        String mytopPageUrl = mytopPage.get(0).attr("src");
+        // 解析基本信息
+        Document document1 = Execute.getDocumentByMethod(mytopPageUrl, "GET", null);
+        Element userInfoTable = document1.select("table").get(2);
+        Elements infos = userInfoTable.select("font[color='#008000']");
+        baseUserInfo.setAccount(infos.get(0).text());
+        baseUserInfo.setName(infos.get(1).text());
+        baseUserInfo.setIdentity(infos.get(2).text());
+
+        // 解析 注销url
+        Element table1 = document1.select("table").get(1);
+        Elements as = table1.select("a");
+        Element logoutUrlEle = as.get(as.size() - 1);
+        UrlInfo.LOGOUT_URL = logoutUrlEle.attr("href");
+
+        String heartbeatUrlTemp = mytopPageUrl.replaceAll("mygettita", "zzjgetonlinetime") + "&sid=%s&ww6=652";
+        long sid = Math.round(Math.random() * 800000 + 100000);
+        // 取在线时长 和  在线人数
+        UrlInfo.HEART_BEAT = String.format(heartbeatUrlTemp, sid);
+
+        // index first page[content]
+        Elements firstPage = document.select("frame[NAME='content']");
+        String firstPageUrl = firstPage.get(0).attr("src");
         firstPage(firstPageUrl);
     }
-
 
     /**
      * 首页
@@ -107,41 +143,17 @@ public class CoreParser {
         parseAssistanter.parseFirstPageInfo(firstPage);
     }
 
-
-    /**
-     * 根据课程名点播
-     *
-     * @param keName 课程名
-     * @throws IOException e
-     */
-    @SuppressWarnings({"all"})
-    public void demandBykeName(String keName, Map<String, String> keUrlMap) throws IOException, InterruptedException {
-        CountDownLatch countDownLatch = new CountDownLatch(1);
-        String keUrl = keUrlMap.get(keName);
-        ClassInfo classInfo = new ClassInfo();
-        classInfo.setClassName(keName);
-        classInfo.setClassUrl(keUrl);
-        Document document = Execute.getDocumentByMethod(keUrl, "GET", null);
-        parseAssistanter.parseClassDocument(document, classInfo);
-        // 创建任务
-        DemandClassThread demandVideo = new DemandClassThread(classInfo, PARALLEL_NUM, countDownLatch);
-        Thread thread = new Thread(demandVideo);
-        thread.setName(keName);
-        thread.start();
-        countDownLatch.await();
-    }
-
     /**
      * 点播全部课程
      *
      * @param keUrlMap 全部课程url
      */
-    public void demandAllClass(Map<String, String> keUrlMap) throws InterruptedException {
+    public void demandAllClass(IndexFrame indexFrame, Map<String, String> keUrlMap) throws InterruptedException {
         CountDownLatch countDownLatch = new CountDownLatch(keUrlMap.size());
         // 课程信息列表
         List<ClassInfo> keList = this.getKeInfoList(keUrlMap);
         // 启动任务
-        this.startTaskByConsole(keList, countDownLatch);
+        this.startTaskByConsole(indexFrame, keList, countDownLatch);
         // 等待全部任务结束
         countDownLatch.await();
     }
@@ -152,12 +164,25 @@ public class CoreParser {
      * @param keList         课程list
      * @param countDownLatch 计数器
      */
-    private void startTaskByConsole(List<ClassInfo> keList, CountDownLatch countDownLatch) {
+    private void startTaskByConsole(IndexFrame indexFrame, List<ClassInfo> keList, CountDownLatch countDownLatch) {
+        // 初始化线程数量
+        if (coreProperties.getThreadNum() == 0) {
+            // 如没有设置线程数，同时执行线程数为当前学期课程数量
+            coreProperties.setThreadNum(keList.size());
+        }
+
+        //控制线程任务执行数量
+        final Semaphore parallelNum = new Semaphore(coreProperties.getThreadNum());
+
+        System.out.println("同时运行线程数【课程数量】：" + coreProperties.getThreadNum());
+
         // 启动任务
         keList.forEach(classInfo -> {
             // 创建任务
-            DemandClassThread demandVideo = new DemandClassThread(classInfo,
-                    PARALLEL_NUM,
+            DemandClassThread demandVideo = new DemandClassThread(
+                    indexFrame,
+                    classInfo,
+                    parallelNum,
                     countDownLatch);
             Thread thread = new Thread(demandVideo);
             thread.setName(classInfo.getClassName());
